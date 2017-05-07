@@ -34,7 +34,7 @@ func TestCorrectQuery(t *testing.T) {
 }
 
 func TestParsePage(t *testing.T) {
-	f, _ := os.Open("./sample.html")
+	f, _ := os.Open("./test/sample.html")
 	w := parsePage(f)
 
 	const expectedWord = "hlavní"
@@ -113,7 +113,7 @@ func TestParsePage(t *testing.T) {
 }
 
 func TestParseAltPage(t *testing.T) {
-	f, _ := os.Open("./sample_issue8.html")
+	f, _ := os.Open("./test/sample_issue8.html")
 	w := parsePage(f)
 
 	const expectedWord = "soutěživý"
@@ -153,7 +153,7 @@ func TestParseAltPage(t *testing.T) {
 }
 
 func TestParseIssue7(t *testing.T) {
-	f, _ := os.Open("./sample_issue7.html")
+	f, _ := os.Open("./test/sample_issue7.html")
 	w := parsePage(f)
 
 	const expectedWord = "protože"
