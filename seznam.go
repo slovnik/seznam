@@ -14,7 +14,7 @@ var urls = map[slovnik.Language]string{
 }
 
 // Translate word using slovnik.seznam.cz
-func Translate(word string, language slovnik.Language) (slovnik.Word, error) {
+func Translate(word string, language slovnik.Language) ([]*slovnik.Word, error) {
 	query := prepareQuery(word, language)
 	return getTranslations(query)
 }
@@ -30,10 +30,10 @@ func prepareQuery(word string, language slovnik.Language) *url.URL {
 	return query
 }
 
-func getTranslations(url *url.URL) (slovnik.Word, error) {
+func getTranslations(url *url.URL) ([]*slovnik.Word, error) {
 	resp, err := http.Get(url.String())
 	if err != nil {
-		return slovnik.Word{}, err
+		return nil, err
 	}
 	return parsePage(resp.Body), nil
 }

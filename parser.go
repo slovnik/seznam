@@ -10,8 +10,12 @@ import (
 
 var f func(w *slovnik.Word, data string)
 
-func parsePage(pageBody io.Reader) slovnik.Word {
+func parsePage(pageBody io.Reader) []*slovnik.Word {
 	z := html.NewTokenizer(pageBody)
+
+	isFullTranslation := false
+	inMistypesList := false
+	inMistypeWord := false
 
 	inTranslations := false
 	foundSynonymsHeader := false
@@ -23,22 +27,34 @@ func parsePage(pageBody io.Reader) slovnik.Word {
 
 	prevTag := ""
 
-	w := slovnik.Word{}
+	result := []*slovnik.Word{}
+	var w *slovnik.Word
+
 	for {
 		tt := z.Next()
 
 		switch {
 		case tt == html.ErrorToken:
-			return w
+			return result
 
 		case tt == html.StartTagToken:
 			t := z.Token()
 
 			if t.Data == "h3" {
 				lang := getAttr(t.Attr, "lang")
-				if lang == "cs" || lang == "ru" {
+				if (lang == "cs" || lang == "ru") && isFullTranslation {
+					w = &slovnik.Word{}
+					result = append(result, w)
 					f = addWord
 				}
+			}
+
+			if t.Data == "ul" && getAttr(t.Attr, "class") == "mistype" {
+				inMistypesList = true
+			}
+
+			if t.Data == "li" && inMistypesList {
+				inMistypeWord = true
 			}
 
 			if t.Data == "div" {
@@ -46,9 +62,13 @@ func parsePage(pageBody io.Reader) slovnik.Word {
 				inSynonymsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundSynonymsHeader
 				inAntonymsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundAntonymsHeader
 				inDerivedWordsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundDerivedWordsHeader
+
+				if getAttr(t.Attr, "id") == "results" {
+					isFullTranslation = (getAttr(t.Attr, "class") == "transl")
+				}
 			}
 
-			if t.Data == "span" && inTranslations {
+			if t.Data == "span" && (inTranslations || inMistypeWord) {
 				if getAttr(t.Attr, "class") != "comma" {
 					f = addTranslation
 				}
@@ -67,6 +87,10 @@ func parsePage(pageBody io.Reader) slovnik.Word {
 					f = addAntonym
 				} else if inDerivedWordsBlock {
 					f = addDerivedWord
+				} else if inMistypeWord {
+					w = &slovnik.Word{}
+					result = append(result, w)
+					f = addWord
 				}
 			}
 
@@ -99,12 +123,20 @@ func parsePage(pageBody io.Reader) slovnik.Word {
 					foundDerivedWordsHeader = false
 				}
 			}
+
+			if t.Data == "ul" && inMistypesList == true {
+				inMistypesList = false
+			}
+
+			if t.Data == "li" && inMistypeWord {
+				inMistypeWord = false
+			}
 			break
 
 		case tt == html.TextToken:
 			t := z.Token()
 			if f != nil {
-				f(&w, t.Data)
+				f(w, t.Data)
 				f = nil
 			}
 

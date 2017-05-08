@@ -35,9 +35,10 @@ func TestCorrectQuery(t *testing.T) {
 
 func TestParsePage(t *testing.T) {
 	f, _ := os.Open("./test/sample.html")
-	w := parsePage(f)
+	result := parsePage(f)
 
 	const expectedWord = "hlavní"
+	w := result[0]
 
 	if w.Word != expectedWord {
 		t.Errorf("ParsePage word == %q, want %q", w.Word, expectedWord)
@@ -114,7 +115,8 @@ func TestParsePage(t *testing.T) {
 
 func TestParseAltPage(t *testing.T) {
 	f, _ := os.Open("./test/sample_issue8.html")
-	w := parsePage(f)
+	result := parsePage(f)
+	w := result[0]
 
 	const expectedWord = "soutěživý"
 
@@ -154,7 +156,8 @@ func TestParseAltPage(t *testing.T) {
 
 func TestParseIssue7(t *testing.T) {
 	f, _ := os.Open("./test/sample_issue7.html")
-	w := parsePage(f)
+	result := parsePage(f)
+	w := result[0]
 
 	const expectedWord = "protože"
 
@@ -176,6 +179,63 @@ func TestParseIssue7(t *testing.T) {
 	for i, trans := range w.Translations {
 		if trans != expectedTranslations[i] {
 			t.Errorf("ParsePage translation == %q, want %q", trans, expectedTranslations[i])
+		}
+	}
+}
+
+func TestMultipleResults(t *testing.T) {
+	f, _ := os.Open("./test/sample_multiple_results.html")
+	result := parsePage(f)
+
+	const expectedCount = 9
+
+	if len(result) != expectedCount {
+		t.Errorf("ParsePage len(w) == %d, want %d", len(result), expectedCount)
+
+		return
+	}
+
+	expectedWords := []string{
+		"dobrat se",
+		"doba",
+		"do",
+		"dobrý",
+		"dobro",
+		"dobré",
+		"dobrat",
+		"obr",
+		"bobr",
+	}
+
+	expectedTranslations := []string{
+		"добра́ться",
+		"вре́мя",
+		"в",
+		"хоро́ший",
+		"добро́",
+		"добро́",
+		"израсхо́довать",
+		"гига́нт",
+		"бобр",
+	}
+
+	for i, w := range result {
+		if w.Word != expectedWords[i] {
+			t.Errorf("ParsePage w.Word == %s, want %s", w.Word, expectedWords[i])
+
+			return
+		}
+
+		if len(w.Translations) == 0 {
+			t.Errorf("ParsePage len(w.Translations) == %s, want 1", len(w.Translations))
+
+			return
+		}
+
+		if w.Translations[0] != expectedTranslations[i] {
+			t.Errorf("ParsePage w.Translation == %s, want %s", w.Translations[0], expectedTranslations[i])
+
+			return
 		}
 	}
 }
