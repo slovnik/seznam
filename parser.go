@@ -6,6 +6,16 @@ import (
 	"github.com/slovnik/slovnik"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+)
+
+const (
+	synonymsHeader     = "Synonyma"
+	antonymsHeader     = "Antonyma"
+	derivedWordsHeader = "Odvozená slova"
+
+	otherMeaningClass = "other-meaning"
+	fastMeaningsClass = "fastMeanings"
 )
 
 var f func(w *slovnik.Word, data string)
@@ -13,10 +23,54 @@ var f func(w *slovnik.Word, data string)
 func parsePage(pageBody io.Reader) []*slovnik.Word {
 	z := html.NewTokenizer(pageBody)
 
-	isFullTranslation := false
-	inMistypesList := false
-	inMistypeWord := false
+	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+		tok := parseToken{z.Token()}
+		if tokenType == html.StartTagToken && tok.id() == "results" {
+			if tok.class() == "transl" {
+				return processSingleWord(z)
+			}
 
+			return processMistype(z)
+		}
+
+		tokenType = z.Next()
+	}
+
+	return []*slovnik.Word{}
+}
+
+func processMistype(z *html.Tokenizer) []*slovnik.Word {
+	result := []*slovnik.Word{}
+	var w *slovnik.Word
+
+	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+		token := parseToken{z.Token()}
+
+		switch {
+		case tokenType == html.StartTagToken:
+			if token.DataAtom == atom.Span {
+				f = addTranslation
+			}
+
+			if token.DataAtom == atom.A {
+				w = &slovnik.Word{}
+				result = append(result, w)
+				f = addWord
+			}
+
+		case tokenType == html.TextToken:
+			if f != nil {
+				f(w, token.Data)
+				f = nil
+			}
+		}
+
+		tokenType = z.Next()
+	}
+	return result
+}
+
+func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 	inTranslations := false
 	foundSynonymsHeader := false
 	inSynonymsBlock := false
@@ -25,58 +79,42 @@ func parsePage(pageBody io.Reader) []*slovnik.Word {
 	foundDerivedWordsHeader := false
 	inDerivedWordsBlock := false
 
-	prevTag := ""
+	prevTag := atom.Body
 
 	result := []*slovnik.Word{}
 	var w *slovnik.Word
 
-	for {
-		tt := z.Next()
+	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+		token := parseToken{z.Token()}
 
 		switch {
-		case tt == html.ErrorToken:
-			return result
+		case tokenType == html.StartTagToken:
+			if token.DataAtom == atom.H3 {
 
-		case tt == html.StartTagToken:
-			t := z.Token()
-
-			if t.Data == "h3" {
-				lang := getAttr(t.Attr, "lang")
-				if (lang == "cs" || lang == "ru") && isFullTranslation {
+				lang := token.lang()
+				if lang == "cs" || lang == "ru" {
 					w = &slovnik.Word{}
 					result = append(result, w)
 					f = addWord
 				}
 			}
 
-			if t.Data == "ul" && getAttr(t.Attr, "class") == "mistype" {
-				inMistypesList = true
+			if token.DataAtom == atom.Div {
+				inTranslations = token.id() == fastMeaningsClass
+				inSynonymsBlock = token.class() == otherMeaningClass && foundSynonymsHeader
+				inAntonymsBlock = token.class() == otherMeaningClass && foundAntonymsHeader
+				inDerivedWordsBlock = token.class() == otherMeaningClass && foundDerivedWordsHeader
 			}
 
-			if t.Data == "li" && inMistypesList {
-				inMistypeWord = true
-			}
-
-			if t.Data == "div" {
-				inTranslations = getAttr(t.Attr, "id") == "fastMeanings"
-				inSynonymsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundSynonymsHeader
-				inAntonymsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundAntonymsHeader
-				inDerivedWordsBlock = getAttr(t.Attr, "class") == "other-meaning" && foundDerivedWordsHeader
-
-				if getAttr(t.Attr, "id") == "results" {
-					isFullTranslation = (getAttr(t.Attr, "class") == "transl")
-				}
-			}
-
-			if t.Data == "span" && (inTranslations || inMistypeWord) {
-				if getAttr(t.Attr, "class") != "comma" {
+			if token.DataAtom == atom.Span && inTranslations {
+				if token.class() != "comma" {
 					f = addTranslation
 				}
 			}
 
-			if t.Data == "a" {
+			if token.DataAtom == atom.A {
 				if inTranslations {
-					if prevTag == "a" {
+					if prevTag == atom.A {
 						f = updateLastTranslation
 					} else {
 						f = addTranslation
@@ -87,29 +125,20 @@ func parsePage(pageBody io.Reader) []*slovnik.Word {
 					f = addAntonym
 				} else if inDerivedWordsBlock {
 					f = addDerivedWord
-				} else if inMistypeWord {
-					w = &slovnik.Word{}
-					result = append(result, w)
-					f = addWord
 				}
 			}
 
-			if t.Data == "span" && getAttr(t.Attr, "class") == "morf" {
+			if token.DataAtom == atom.Span && token.class() == "morf" {
 				f = addWordType
 			}
 
-			prevTag = t.Data
+			prevTag = token.DataAtom
 
-			break
+		case tokenType == html.SelfClosingTagToken:
+			prevTag = token.DataAtom
 
-		case tt == html.SelfClosingTagToken:
-			t := z.Token()
-			prevTag = t.Data
-			break
-
-		case tt == html.EndTagToken:
-			t := z.Token()
-			if t.Data == "div" {
+		case tokenType == html.EndTagToken:
+			if token.DataAtom == atom.Div {
 				if inTranslations {
 					inTranslations = false
 				} else if inSynonymsBlock {
@@ -124,37 +153,25 @@ func parsePage(pageBody io.Reader) []*slovnik.Word {
 				}
 			}
 
-			if t.Data == "ul" && inMistypesList == true {
-				inMistypesList = false
-			}
-
-			if t.Data == "li" && inMistypeWord {
-				inMistypeWord = false
-			}
-			break
-
-		case tt == html.TextToken:
-			t := z.Token()
+		case tokenType == html.TextToken:
 			if f != nil {
-				f(w, t.Data)
+				f(w, token.Data)
 				f = nil
 			}
 
-			switch t.Data {
-			case "Synonyma":
+			switch token.Data {
+			case synonymsHeader:
 				foundSynonymsHeader = true
-				break
-			case "Antonyma":
+			case antonymsHeader:
 				foundAntonymsHeader = true
-				break
-			case "Odvozená slova":
+			case derivedWordsHeader:
 				foundDerivedWordsHeader = true
-				break
 			}
-
-			break
 		}
+
+		tokenType = z.Next()
 	}
+	return result
 }
 
 func addWord(w *slovnik.Word, data string) {
@@ -187,14 +204,4 @@ func addAntonym(w *slovnik.Word, data string) {
 
 func addDerivedWord(w *slovnik.Word, data string) {
 	w.DerivedWords = append(w.DerivedWords, data)
-}
-
-func getAttr(attrs []html.Attribute, name string) string {
-	for _, a := range attrs {
-		if a.Key == name {
-			return a.Val
-		}
-	}
-
-	return ""
 }

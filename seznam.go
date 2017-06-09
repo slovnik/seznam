@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"fmt"
+
 	"github.com/slovnik/slovnik"
 )
 
@@ -15,22 +17,31 @@ var urls = map[slovnik.Language]string{
 
 // Translate word using slovnik.seznam.cz
 func Translate(word string, language slovnik.Language) ([]*slovnik.Word, error) {
-	query := prepareQuery(word, language)
+	query, err := prepareQuery(word, language)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return getTranslations(query)
 }
 
-func prepareQuery(word string, language slovnik.Language) *url.URL {
-	query, _ := url.Parse(urls[language])
+func prepareQuery(word string, language slovnik.Language) (*url.URL, error) {
+	query, err := url.Parse(urls[language])
+
+	if err != nil {
+		return nil, err
+	}
 
 	p := url.Values{}
 	p.Add("q", word)
 	p.Add("shortView", "0")
 
 	query.RawQuery = p.Encode()
-	return query
+	return query, nil
 }
 
-func getTranslations(url *url.URL) ([]*slovnik.Word, error) {
+func getTranslations(url fmt.Stringer) ([]*slovnik.Word, error) {
 	resp, err := http.Get(url.String())
 	if err != nil {
 		return nil, err
