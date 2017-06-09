@@ -191,6 +191,10 @@ func TestMultipleResults(t *testing.T) {
 		"бобр",
 	}
 
+	if len(result) != len(expectedWords) {
+		t.Errorf("ParsePage len(result) == %d, want %d", len(result), len(expectedWords))
+	}
+
 	for i, w := range result {
 		if w.Word != expectedWords[i] {
 			t.Errorf("ParsePage w.Word == %s, want %s", w.Word, expectedWords[i])

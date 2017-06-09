@@ -1,6 +1,7 @@
 package seznam
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/slovnik/slovnik"
@@ -21,22 +22,36 @@ const (
 var f func(w *slovnik.Word, data string)
 
 func parsePage(pageBody io.Reader) []*slovnik.Word {
-	z := html.NewTokenizer(pageBody)
+	doc, _ := html.Parse(pageBody)
 
-	for tokenType := z.Next(); tokenType != html.ErrorToken; {
-		tok := parseToken{z.Token()}
-		if tokenType == html.StartTagToken && tok.id() == "results" {
-			if tok.class() == "transl" {
-				return processSingleWord(z)
-			}
+	results := getResultsNode(doc)
+	attrs := Attributes(results.Attr)
 
-			return processMistype(z)
-		}
+	buf := new(bytes.Buffer)
+	html.Render(buf, results)
+	tokenizer := html.NewTokenizer(buf)
 
-		tokenType = z.Next()
+	if attrs.class() == "transl" {
+		return processSingleWord(tokenizer)
 	}
 
-	return []*slovnik.Word{}
+	return processMistype(tokenizer)
+}
+
+func getResultsNode(document *html.Node) (results *html.Node) {
+	var traverse func(*html.Node)
+
+	traverse = func(n *html.Node) {
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if c.DataAtom == atom.Div && Attributes(c.Attr).id() == "results" {
+				results = c
+				return
+			}
+			traverse(c)
+		}
+	}
+	traverse(document)
+	return
 }
 
 func processMistype(z *html.Tokenizer) []*slovnik.Word {
@@ -44,7 +59,7 @@ func processMistype(z *html.Tokenizer) []*slovnik.Word {
 	var w *slovnik.Word
 
 	for tokenType := z.Next(); tokenType != html.ErrorToken; {
-		token := parseToken{z.Token()}
+		token := z.Token()
 
 		switch {
 		case tokenType == html.StartTagToken:
@@ -53,7 +68,7 @@ func processMistype(z *html.Tokenizer) []*slovnik.Word {
 			}
 
 			if token.DataAtom == atom.A {
-				w = &slovnik.Word{}
+				w = new(slovnik.Word)
 				result = append(result, w)
 				f = addWord
 			}
@@ -85,13 +100,14 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 	var w *slovnik.Word
 
 	for tokenType := z.Next(); tokenType != html.ErrorToken; {
-		token := parseToken{z.Token()}
+		token := z.Token()
+		attrs := Attributes(token.Attr)
 
 		switch {
 		case tokenType == html.StartTagToken:
 			if token.DataAtom == atom.H3 {
 
-				lang := token.lang()
+				lang := attrs.lang()
 				if lang == "cs" || lang == "ru" {
 					w = &slovnik.Word{}
 					result = append(result, w)
@@ -100,14 +116,14 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 			}
 
 			if token.DataAtom == atom.Div {
-				inTranslations = token.id() == fastMeaningsClass
-				inSynonymsBlock = token.class() == otherMeaningClass && foundSynonymsHeader
-				inAntonymsBlock = token.class() == otherMeaningClass && foundAntonymsHeader
-				inDerivedWordsBlock = token.class() == otherMeaningClass && foundDerivedWordsHeader
+				inTranslations = attrs.id() == fastMeaningsClass
+				inSynonymsBlock = attrs.class() == otherMeaningClass && foundSynonymsHeader
+				inAntonymsBlock = attrs.class() == otherMeaningClass && foundAntonymsHeader
+				inDerivedWordsBlock = attrs.class() == otherMeaningClass && foundDerivedWordsHeader
 			}
 
 			if token.DataAtom == atom.Span && inTranslations {
-				if token.class() != "comma" {
+				if attrs.class() != "comma" {
 					f = addTranslation
 				}
 			}
@@ -128,7 +144,7 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 				}
 			}
 
-			if token.DataAtom == atom.Span && token.class() == "morf" {
+			if token.DataAtom == atom.Span && attrs.class() == "morf" {
 				f = addWordType
 			}
 
