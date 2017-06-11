@@ -25,7 +25,7 @@ func parsePage(pageBody io.Reader) []*slovnik.Word {
 	doc, _ := html.Parse(pageBody)
 
 	results := getResultsNode(doc)
-	attrs := Attributes(results.Attr)
+	attrs := attributes(results.Attr)
 
 	buf := new(bytes.Buffer)
 	html.Render(buf, results)
@@ -43,7 +43,7 @@ func getResultsNode(document *html.Node) (results *html.Node) {
 
 	traverse = func(n *html.Node) {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if c.DataAtom == atom.Div && Attributes(c.Attr).id() == "results" {
+			if c.DataAtom == atom.Div && attributes(c.Attr).id() == "results" {
 				results = c
 				return
 			}
@@ -101,7 +101,7 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 
 	for tokenType := z.Next(); tokenType != html.ErrorToken; {
 		token := z.Token()
-		attrs := Attributes(token.Attr)
+		attrs := attributes(token.Attr)
 
 		switch {
 		case tokenType == html.StartTagToken:

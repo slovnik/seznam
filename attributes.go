@@ -5,9 +5,10 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-type Attributes []html.Attribute
+// attributes is a helper type for quickly accessing the attributes of HTML token or node
+type attributes []html.Attribute
 
-func (attrs Attributes) get(name atom.Atom) string {
+func (attrs attributes) get(name atom.Atom) string {
 	for _, a := range attrs {
 		if a.Key == name.String() {
 			return a.Val
@@ -17,14 +18,14 @@ func (attrs Attributes) get(name atom.Atom) string {
 	return ""
 }
 
-func (attrs Attributes) id() string {
+func (attrs attributes) id() string {
 	return attrs.get(atom.Id)
 }
 
-func (attrs Attributes) class() string {
+func (attrs attributes) class() string {
 	return attrs.get(atom.Class)
 }
 
-func (attrs Attributes) lang() string {
+func (attrs attributes) lang() string {
 	return attrs.get(atom.Lang)
 }

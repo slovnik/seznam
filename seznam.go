@@ -12,7 +12,7 @@ import (
 // Map of urls used for translation
 var urls = map[slovnik.Language]string{
 	slovnik.Cz: "https://slovnik.seznam.cz/cz-ru/",
-	slovnik.Ru: "https://slovnik.seznam.cz/ru/",
+	slovnik.Ru: "https://slovnik.seznam.cz/ru-cz/",
 }
 
 // Translate word using slovnik.seznam.cz

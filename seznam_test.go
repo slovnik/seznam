@@ -16,18 +16,21 @@ func TestCorrectQuery(t *testing.T) {
 		query string
 	}{
 		{"hlavní", slovnik.Cz, "https://slovnik.seznam.cz/cz-ru/", "q=hlavní&shortView=0"},
-		{"привет", slovnik.Ru, "https://slovnik.seznam.cz/ru/", "q=привет&shortView=0"},
-		{"sиniy", slovnik.Ru, "https://slovnik.seznam.cz/ru/", "q=sиniy&shortView=0"},
+		{"привет", slovnik.Ru, "https://slovnik.seznam.cz/ru-cz/", "q=привет&shortView=0"},
+		{"sиniy", slovnik.Ru, "https://slovnik.seznam.cz/ru-cz/", "q=sиniy&shortView=0"},
 	}
 
 	for _, c := range cases {
-		resultURL, _ := prepareQuery(c.word, c.lang)
+		t.Run(c.word, func(t *testing.T) {
+			resultURL, _ := prepareQuery(c.word, c.lang)
 
-		values, _ := url.ParseQuery(c.query)
-		expectedURL, _ := url.Parse(c.url)
-		expectedURL.RawQuery = values.Encode()
-		if resultURL.String() != expectedURL.String() {
-			t.Errorf("prepareQuery url == %q, want %q", resultURL, expectedURL)
-		}
+			values, _ := url.ParseQuery(c.query)
+			expectedURL, _ := url.Parse(c.url)
+			expectedURL.RawQuery = values.Encode()
+			if resultURL.String() != expectedURL.String() {
+				t.Errorf("prepareQuery url == %q, want %q", resultURL, expectedURL)
+			}
+		})
+
 	}
 }
