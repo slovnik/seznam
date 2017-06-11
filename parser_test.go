@@ -1,6 +1,7 @@
 package seznam
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -82,6 +83,14 @@ func TestParsePage(t *testing.T) {
 		if derived != expectedDerivedWords[i] {
 			t.Errorf("ParsePage derivedWord == %q, want %q", derived, expectedDerivedWords[i])
 		}
+	}
+
+	for _, s := range w.Samples {
+		fmt.Printf("%s: %s -> %s\n", s.Keyword, s.Phrase, s.Translation)
+	}
+
+	if len(w.Samples) != 31 {
+		t.Errorf("ParsePage len(Samples) == %d, want 31", len(w.Samples))
 	}
 }
 

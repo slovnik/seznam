@@ -6,6 +6,8 @@ import (
 
 	"github.com/slovnik/slovnik"
 
+	"strings"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -38,6 +40,7 @@ func parsePage(pageBody io.Reader) []*slovnik.Word {
 	return processMistype(tokenizer)
 }
 
+// getResultsNode parses page HTML to find node containing results of translation
 func getResultsNode(document *html.Node) (results *html.Node) {
 	var traverse func(*html.Node)
 
@@ -128,6 +131,11 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 				}
 			}
 
+			if token.DataAtom == atom.Ul && attrs.id() == "fulltext" {
+				sample := processSample(z)
+				w.Samples = append(w.Samples, sample)
+			}
+
 			if token.DataAtom == atom.A {
 				if inTranslations {
 					if prevTag == atom.A {
@@ -187,6 +195,61 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 
 		tokenType = z.Next()
 	}
+	return result
+}
+
+func processSample(z *html.Tokenizer) slovnik.SampleUse {
+	inWord := false
+	inSpan := false
+	spanCount := 0
+
+	result := slovnik.SampleUse{}
+
+loop:
+	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+		token := z.Token()
+
+		switch tokenType {
+		case html.StartTagToken:
+			if token.DataAtom == atom.A {
+				inWord = true
+			}
+
+			if token.DataAtom == atom.Span {
+				inSpan = true
+			}
+
+		case html.EndTagToken:
+			if token.DataAtom == atom.A && inWord {
+				inWord = false
+			}
+
+			if token.DataAtom == atom.Span {
+				inSpan = false
+				spanCount = spanCount + 1
+			}
+
+			if token.DataAtom == atom.Ul {
+				break loop
+			}
+		case html.TextToken:
+
+			if inWord {
+				result.Keyword = strings.TrimSpace(token.Data)
+			}
+
+			if inSpan && spanCount == 0 {
+				result.Phrase = strings.TrimSpace(token.Data)
+			}
+
+			if spanCount == 2 && len(result.Translation) == 0 {
+				result.Translation = strings.TrimSpace(token.Data)
+			}
+		}
+
+		tokenType = z.Next()
+	}
+
 	return result
 }
 
