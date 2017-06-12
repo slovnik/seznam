@@ -1,14 +1,14 @@
 package seznam
 
 import (
-	"fmt"
 	"os"
 	"testing"
+	"fmt"
 )
 
 func TestParsePage(t *testing.T) {
 	f, _ := os.Open("./test/sample.html")
-	result := parsePage(f)
+	result, _ := parsePage(f)
 
 	const expectedWord = "hlavní"
 	w := result[0]
@@ -85,10 +85,6 @@ func TestParsePage(t *testing.T) {
 		}
 	}
 
-	for _, s := range w.Samples {
-		fmt.Printf("%s: %s -> %s\n", s.Keyword, s.Phrase, s.Translation)
-	}
-
 	if len(w.Samples) != 31 {
 		t.Errorf("ParsePage len(Samples) == %d, want 31", len(w.Samples))
 	}
@@ -96,7 +92,7 @@ func TestParsePage(t *testing.T) {
 
 func TestParseAltPage(t *testing.T) {
 	f, _ := os.Open("./test/sample_issue8.html")
-	result := parsePage(f)
+	result, _ := parsePage(f)
 	w := result[0]
 
 	const expectedWord = "soutěživý"
@@ -137,7 +133,7 @@ func TestParseAltPage(t *testing.T) {
 
 func TestParseIssue7(t *testing.T) {
 	f, _ := os.Open("./test/sample_issue7.html")
-	result := parsePage(f)
+	result, _ := parsePage(f)
 	w := result[0]
 
 	const expectedWord = "protože"
@@ -166,9 +162,15 @@ func TestParseIssue7(t *testing.T) {
 
 func TestMultipleResults(t *testing.T) {
 	f, _ := os.Open("./test/sample_multiple_results.html")
-	result := parsePage(f)
+	result, _ := parsePage(f)
 
 	const expectedCount = 9
+
+	for _, value := range result {
+		fmt.Println(value)
+	}
+
+	//fmt.Println(result)
 
 	if len(result) != expectedCount {
 		t.Errorf("ParsePage len(w) == %d, want %d", len(result), expectedCount)

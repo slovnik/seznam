@@ -46,5 +46,5 @@ func getTranslations(url fmt.Stringer) ([]*slovnik.Word, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parsePage(resp.Body), nil
+	return parsePage(resp.Body)
 }
