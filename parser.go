@@ -162,10 +162,10 @@ func processTranslations(z *html.Tokenizer, w *slovnik.Word) {
 		case html.SelfClosingTagToken:
 			prevClosingToken = token
 		case html.TextToken:
-			if prevToken.DataAtom == atom.Span &&
-				prevToken.Type == html.StartTagToken &&
-				attributes(prevToken.Attr).class() != "comma" {
-				addTranslation(w, token.Data)
+			if prevToken.DataAtom == atom.Span && prevToken.Type == html.StartTagToken {
+				if attributes(prevToken.Attr).class() != "comma" {
+					updateLastTranslation(w, token.Data)
+				}
 			}
 
 			if prevToken.DataAtom == atom.A {
@@ -246,6 +246,8 @@ func updateLastTranslation(w *slovnik.Word, data string) {
 		lastTranslation := w.Translations[len(w.Translations)-1]
 		lastTranslation = lastTranslation + " " + data
 		w.Translations[len(w.Translations)-1] = lastTranslation
+	} else {
+		addTranslation(w, data)
 	}
 }
 
