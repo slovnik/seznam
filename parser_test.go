@@ -3,6 +3,8 @@ package seznam
 import (
 	"os"
 	"testing"
+
+	"github.com/slovnik/slovnik"
 )
 
 func TestParsePage(t *testing.T) {
@@ -86,6 +88,46 @@ func TestParsePage(t *testing.T) {
 
 	if len(w.Samples) != 31 {
 		t.Errorf("ParsePage len(Samples) == %d, want 31", len(w.Samples))
+	}
+
+	expectedSamples := []slovnik.SampleUse{
+		{Keyword: "stan", Phrase: "hlavní stan", Translation: "velitelský ста́вка (главнокома́ндующего), штаб-кварти́ра"},
+		{Keyword: "jídlo", Phrase: "hlavní jídlo", Translation: "основно́е/второ́е блю́до"},
+		{Keyword: "město", Phrase: "hlavní město", Translation: "столи́ца"},
+		{Keyword: "nádraží", Phrase: "hlavní nádraží", Translation: "гла́вный вокза́л"},
+		{Keyword: "přízvuk", Phrase: "hlavní /vedlejší přízvuk", Translation: "гла́вное/второстепе́нное ударе́ние"},
+		{Keyword: "rozhodčí", Phrase: "hlavní rozhodčí", Translation: "гла́вный арби́тр"},
+		{Keyword: "rys", Phrase: "v hrubých/ hlavních rysech", Translation: "в о́бщих/гла́вных черта́х"},
+		{Keyword: "silnice", Phrase: "hlavní /vedlejší silnice", Translation: "гла́вная/второстепе́нная доро́га"},
+		{Keyword: "tah", Phrase: "hlavní tah", Translation: "гла́вная доро́га, магистра́ль"},
+		{Keyword: "zeď", Phrase: "nosná/ hlavní /opěrná zeď", Translation: "несу́щая/капита́льная/опо́рная стена́"},
+		{Keyword: "bod", Phrase: "hlavní bod jednání", Translation: "основно́й пункт перегово́ров"},
+		{Keyword: "hlavně", Phrase: "Hlavně , že jsi přišel.", Translation: "Гла́вное, что ты здесь."},
+		{Keyword: "hrát", Phrase: "hrát hlavní roli", Translation: "исполня́ть гла́вную роль"},
+		{Keyword: "chod", Phrase: "hlavní chod", Translation: "горя́чее блюдо́"},
+		{Keyword: "komunikace", Phrase: "hlavní /vedlejší komunikace", Translation: "гла́вная/второстепе́нная доро́га"},
+		{Keyword: "mít", Phrase: "mít hlavní slovo/peníze", Translation: "име́ть гла́вное сло́во/де́ньги"},
+		{Keyword: "paluba", Phrase: "hlavní paluba", Translation: "гла́вная па́луба"},
+		{Keyword: "přenést", Phrase: "přenést hlavní město", Translation: "перенести́ столи́цу"},
+		{Keyword: "role", Phrase: "hlavní role", Translation: "гла́вная роль"},
+		{Keyword: "vchod", Phrase: "hlavní /vedlejší/zadní vchod", Translation: "пара́дный/боково́й/за́дний вход"},
+		{Keyword: "výhra", Phrase: "hlavní výhra", Translation: "гла́вный вы́игрыш"},
+		{Keyword: "žalobce", Phrase: "hlavní /státní/veřejný žalobce", Translation: "гла́вный/госуда́рственный/обще́ственный обвини́тель"},
+		{Keyword: "второ́е", Phrase: "Co si dáte jako hlavní jídlo?", Translation: "Что зака́жете на второ́е?"},
+		{Keyword: "основно́й", Phrase: "hlavní cíl", Translation: "основна́я цель"},
+		{Keyword: "сезо́н", Phrase: "hlavní sezóna", Translation: "высо́кий сезо́н"},
+		{Keyword: "столи́ца", Phrase: "Moskva je hlavním městem Ruska.", Translation: "Москва́ столи́ца Росси́и."},
+		{Keyword: "столи́чный", Phrase: "obyvatelé hlavního města", Translation: "столи́чные жи́тели"},
+		{Keyword: "центра́льный", Phrase: "hlavní ulice", Translation: "центра́льные у́лицы го́рода"},
+		{Keyword: "центра́льный", Phrase: "hlavní nádraží", Translation: "центра́льный вокза́л"},
+		{Keyword: "центра́льный", Phrase: "hlavní knihovna", Translation: "центра́льная библиоте́ка"},
+		{Keyword: "скри́пка", Phrase: "hrát první housle, přen. mít hlavní slovo", Translation: "игра́ть пе́рвую скри́пку"},
+	}
+
+	for i, sample := range expectedSamples {
+		if w.Samples[i] != sample {
+			t.Errorf("ParsePage sample[%d]='%v', want '%v'", i, w.Samples[i], sample)
+		}
 	}
 }
 

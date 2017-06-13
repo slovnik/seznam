@@ -201,22 +201,24 @@ func processBlock(z *html.Tokenizer, w *slovnik.Word, functor func(*slovnik.Word
 	return
 }
 
-func processSample(z *html.Tokenizer) slovnik.SampleUse {
+func processSample(z *html.Tokenizer) (result slovnik.SampleUse) {
 	spanCount := 0
 
-	result := slovnik.SampleUse{}
 	var prevToken html.Token
 
-	for tokenType := z.Next(); !(tokenType == html.EndTagToken && z.Token().DataAtom == atom.Ul); {
+	for tokenType := z.Next(); tokenType != html.ErrorToken; {
 		token := z.Token()
 
 		switch tokenType {
 		case html.EndTagToken:
+			if token.DataAtom == atom.Ul {
+				return
+			}
 			if token.DataAtom == atom.Span {
 				spanCount = spanCount + 1
 			}
 		case html.TextToken:
-			if prevToken.DataAtom == atom.A {
+			if prevToken.DataAtom == atom.A && prevToken.Type == html.StartTagToken {
 				result.Keyword = strings.TrimSpace(token.Data)
 			}
 
@@ -232,7 +234,7 @@ func processSample(z *html.Tokenizer) slovnik.SampleUse {
 		tokenType = z.Next()
 	}
 
-	return result
+	return
 }
 
 func addTranslation(w *slovnik.Word, data string) {
