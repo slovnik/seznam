@@ -261,3 +261,32 @@ func TestMultipleResults(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePageIssue1(t *testing.T) {
+	f, _ := os.Open("./test/sample_issue1.html")
+	result, _ := parsePage(f)
+
+	w := result[0]
+
+	const expectedWord = "kvůli"
+
+	if w.Word != expectedWord {
+		t.Errorf("ParsePage word == %q, want %q", w.Word, expectedWord)
+	}
+
+	expectedTranslations := []string{
+		"из-за",
+		"ра́ди кого/чего",
+	}
+
+	if len(w.Translations) != len(expectedTranslations) {
+		t.Errorf("ParsePage len(translation) == %d, want %d", len(w.Translations), len(expectedTranslations))
+		return
+	}
+
+	for i, trans := range w.Translations {
+		if trans != expectedTranslations[i] {
+			t.Errorf("ParsePage translation == %q, want %q", trans, expectedTranslations[i])
+		}
+	}
+}
