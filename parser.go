@@ -21,6 +21,11 @@ const (
 	fastMeaningsId    = "fastMeanings"
 )
 
+// parsePage parses html structure from provided reader and scrap the data from it.
+// There may be 2 types of pages:
+// - Page with full description for specific word, like: https://slovnik.seznam.cz/cz-ru/?q=hlavn%C3%AD
+// - Mistype page that shows you that you might have spelled word wrong and showing which word it can
+//   actually be, like: https://slovnik.seznam.cz/cz-ru/?q=dobr
 func parsePage(pageBody io.Reader) ([]*slovnik.Word, error) {
 	doc, err := html.Parse(pageBody)
 
@@ -64,6 +69,7 @@ func getResultsNode(document *html.Node) (results *html.Node) {
 	return
 }
 
+// processMistype is used for processing mistyped results
 func processMistype(z *html.Tokenizer) (result []*slovnik.Word) {
 	var w *slovnik.Word
 	var prevToken html.Token
@@ -74,9 +80,8 @@ func processMistype(z *html.Tokenizer) (result []*slovnik.Word) {
 			if prevToken.DataAtom == atom.Span {
 				addTranslation(w, token.Data)
 			} else if prevToken.DataAtom == atom.A && prevToken.Type == html.StartTagToken {
-				w = new(slovnik.Word)
+				w = &slovnik.Word{Word: token.Data}
 				result = append(result, w)
-				addWord(w, token.Data)
 			}
 		}
 		prevToken = token
@@ -85,7 +90,8 @@ func processMistype(z *html.Tokenizer) (result []*slovnik.Word) {
 	return
 }
 
-func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
+// processSingleWord is used for parsing full translation of the word with samples of synonyms, antonyms, etc.
+func processSingleWord(z *html.Tokenizer) (result []*slovnik.Word) {
 	blockName := ""
 	funcs := map[string]func(*slovnik.Word, string){
 		synonymsHeader:     addSynonym,
@@ -93,7 +99,6 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 		derivedWordsHeader: addDerivedWord,
 	}
 
-	result := []*slovnik.Word{}
 	var w *slovnik.Word
 	var prevToken html.Token
 
@@ -121,13 +126,12 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 
 		case tokenType == html.TextToken:
 			if prevToken.DataAtom == atom.H3 && attributes(prevToken.Attr).lang() != "" {
-				w = new(slovnik.Word)
+				w = &slovnik.Word{Word: token.Data}
 				result = append(result, w)
-				addWord(w, token.Data)
 			}
 
 			if prevToken.DataAtom == atom.Span && attributes(prevToken.Attr).class() == "morf" {
-				addWordType(w, token.Data)
+				w.WordType = token.Data
 			}
 
 			if prevToken.DataAtom == atom.P && attributes(prevToken.Attr).class() == "morf" {
@@ -137,7 +141,7 @@ func processSingleWord(z *html.Tokenizer) []*slovnik.Word {
 		prevToken = token
 		tokenType = z.Next()
 	}
-	return result
+	return
 }
 
 func processTranslations(z *html.Tokenizer, w *slovnik.Word) {
@@ -158,7 +162,9 @@ func processTranslations(z *html.Tokenizer, w *slovnik.Word) {
 		case html.SelfClosingTagToken:
 			prevClosingToken = token
 		case html.TextToken:
-			if prevToken.DataAtom == atom.Span && prevToken.Type == html.StartTagToken && attributes(prevToken.Attr).class() != "comma" {
+			if prevToken.DataAtom == atom.Span &&
+				prevToken.Type == html.StartTagToken &&
+				attributes(prevToken.Attr).class() != "comma" {
 				addTranslation(w, token.Data)
 			}
 
@@ -178,24 +184,19 @@ func processTranslations(z *html.Tokenizer, w *slovnik.Word) {
 		prevToken = token
 		tokenType = z.Next()
 	}
-
 }
 
 func processBlock(z *html.Tokenizer, w *slovnik.Word, functor func(*slovnik.Word, string)) {
 	var prevToken html.Token
-	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+	for tt := z.Next(); !(tt == html.EndTagToken && z.Token().DataAtom == atom.Div); {
 		token := z.Token()
 
-		if token.DataAtom == atom.Div && tokenType == html.EndTagToken {
-			return
-		}
-
-		if prevToken.DataAtom == atom.A && prevToken.Type == html.StartTagToken {
+		if prevToken.DataAtom == atom.A {
 			functor(w, token.Data)
 		}
 
 		prevToken = token
-		tokenType = z.Next()
+		tt = z.Next()
 	}
 	return
 }
@@ -206,8 +207,7 @@ func processSample(z *html.Tokenizer) slovnik.SampleUse {
 	result := slovnik.SampleUse{}
 	var prevToken html.Token
 
-loop:
-	for tokenType := z.Next(); tokenType != html.ErrorToken; {
+	for tokenType := z.Next(); !(tokenType == html.EndTagToken && z.Token().DataAtom == atom.Ul); {
 		token := z.Token()
 
 		switch tokenType {
@@ -215,12 +215,7 @@ loop:
 			if token.DataAtom == atom.Span {
 				spanCount = spanCount + 1
 			}
-
-			if token.DataAtom == atom.Ul {
-				break loop
-			}
 		case html.TextToken:
-
 			if prevToken.DataAtom == atom.A {
 				result.Keyword = strings.TrimSpace(token.Data)
 			}
@@ -238,14 +233,6 @@ loop:
 	}
 
 	return result
-}
-
-func addWord(w *slovnik.Word, data string) {
-	w.Word = data
-}
-
-func addWordType(w *slovnik.Word, data string) {
-	w.WordType = data
 }
 
 func addTranslation(w *slovnik.Word, data string) {

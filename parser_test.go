@@ -3,7 +3,6 @@ package seznam
 import (
 	"os"
 	"testing"
-	"fmt"
 )
 
 func TestParsePage(t *testing.T) {
@@ -165,12 +164,6 @@ func TestMultipleResults(t *testing.T) {
 	result, _ := parsePage(f)
 
 	const expectedCount = 9
-
-	for _, value := range result {
-		fmt.Println(value)
-	}
-
-	//fmt.Println(result)
 
 	if len(result) != expectedCount {
 		t.Errorf("ParsePage len(w) == %d, want %d", len(result), expectedCount)

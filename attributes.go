@@ -8,6 +8,7 @@ import (
 // attributes is a helper type for quickly accessing the attributes of HTML token or node
 type attributes []html.Attribute
 
+// get attribute by name
 func (attrs attributes) get(name atom.Atom) string {
 	for _, a := range attrs {
 		if a.Key == name.String() {
