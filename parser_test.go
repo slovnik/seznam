@@ -254,6 +254,10 @@ func TestMultipleResults(t *testing.T) {
 			return
 		}
 
+		if len(w.Translations) > 1 {
+			t.Errorf("ParsePage, len(w.Translations) == %d, want 1", len(w.Translations))
+		}
+
 		if w.Translations[0] != expectedTranslations[i] {
 			t.Errorf("ParsePage w.Translation == %s, want %s", w.Translations[0], expectedTranslations[i])
 
