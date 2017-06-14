@@ -76,10 +76,10 @@ func processMistype(z *html.Tokenizer) (result []*slovnik.Word) {
 
 	for tokenType := z.Next(); tokenType != html.ErrorToken; {
 		token := z.Token()
-		if tokenType == html.TextToken {
+		if tokenType == html.TextToken && prevToken.Type == html.StartTagToken {
 			if prevToken.DataAtom == atom.Span {
 				addTranslation(w, token.Data)
-			} else if prevToken.DataAtom == atom.A && prevToken.Type == html.StartTagToken {
+			} else if prevToken.DataAtom == atom.A {
 				w = &slovnik.Word{Word: token.Data}
 				result = append(result, w)
 			}
