@@ -294,3 +294,40 @@ func TestParsePageIssue1(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePageKozy(t *testing.T) {
+	f, _ := os.Open("./test/sample_koza.html")
+	result, _ := parsePage(f)
+
+	w := result[0]
+
+	const expectedWord = "koza"
+
+	if w.Word != expectedWord {
+		t.Errorf("ParsePage word == %q, want %q", w.Word, expectedWord)
+	}
+
+	expectedTranslations := []string{
+		"коза́",
+		"ко́злы",
+		"козелки́",
+		"козёл",
+		"ду́ра",
+		"си́ськи",
+		"си́си",
+		"ти́тьки",
+		"буфера́",
+		"сисяры́",
+	}
+
+	if len(w.Translations) != len(expectedTranslations) {
+		t.Errorf("ParsePage len(translation) == %d, want %d", len(w.Translations), len(expectedTranslations))
+		return
+	}
+
+	for i, trans := range w.Translations {
+		if trans != expectedTranslations[i] {
+			t.Errorf("ParsePage translation == %q, want %q", trans, expectedTranslations[i])
+		}
+	}
+}
